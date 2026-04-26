@@ -1,4 +1,41 @@
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { Task } from './task.entity';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { TaskStatus } from './task-status.enum';
 
-export class TasksRepository extends Repository<Task> {}
+@Injectable()
+export class TasksRepository extends Repository<Task> {
+  constructor(@InjectDataSource() dataSource: DataSource) {
+    super(Task, dataSource.createEntityManager());
+  }
+
+  async createTask(createTaskDto: CreateTaskDto): Promise<Task> {
+    const { title, description } = createTaskDto;
+    const task = this.create({
+      title,
+      description,
+      status: TaskStatus.OPEN,
+    });
+    await this.save(task);
+    return task;
+  }
+
+  async deleteTask(id: string): Promise<void> {
+    const result = await this.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Task with ID "${id}" not found`);
+    }
+  }
+
+  async updateTaskStatus(id: string, status: TaskStatus): Promise<Task> {
+    const task = await this.findOneBy({ id });
+    if (!task) {
+      throw new NotFoundException(`Task with ID "${id}" not found`);
+    }
+    task.status = status;
+    await this.save(task);
+    return task;
+  }
+}
