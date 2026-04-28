@@ -26,7 +26,6 @@ export class TasksRepository extends Repository<Task> {
     }
 
     const tasks = await query.getMany();
-    console.log(filterDto);
     return tasks;
   }
 
